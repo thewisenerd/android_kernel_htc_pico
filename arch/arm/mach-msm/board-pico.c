@@ -87,6 +87,7 @@
 #endif
 #include <mach/htc_util.h>
 #include <linux/msm_ion.h>
+#include <mach/cable_detect.h>
 
 int htc_get_usb_accessory_adc_level(uint32_t *buffer);
 
