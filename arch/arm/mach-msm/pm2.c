@@ -66,6 +66,11 @@
 #include "pm-boot.h"
 #include <mach/board.h>
 #include <mach/htc_util.h>
+
+#ifdef CONFIG_KEXEC_HARDBOOT
+#include <asm/kexec.h>
+#endif
+
 /******************************************************************************
  * Debug Definitions
  *****************************************************************************/
@@ -1948,6 +1953,19 @@ static void __init boot_lock_nohalt(void)
 	schedule_delayed_work(&work_expire_boot_lock, nohalt_timeout);
 	pr_info("Acquire 'boot-time' no_halt_lock %ds\n", nohalt_timeout / HZ);
 }
+
+#ifdef CONFIG_KEXEC_HARDBOOT
+
+static void msm_kexec_hardboot_hook(void)
+{
+	// Again, I hope this is right, pure luck.
+
+	msm_pm_flush_console();
+	msm_hw_reset_hook();
+}
+	kexec_hardboot_hook = msm_kexec_hardboot_hook;
+#endif
+
 
 /******************************************************************************
  *
