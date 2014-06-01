@@ -33,6 +33,8 @@
 #include <linux/input/doubletap2wake.h>
 #endif
 
+#include <linux/pl_sensor.h>
+
 #ifdef ABS_MT_SLOT
 #define INPUT_PROTOCOL_B
 #include <linux/input/mt.h>
@@ -582,6 +584,11 @@ void himax_dt2w_power(struct work_struct *himax_dt2w_power_work) {
 static DECLARE_WORK(himax_dt2w_power_work, himax_dt2w_power);
 
 static void dt2w_func(int x, int y) {
+    int tmp = pocket_detection_check();
+    //printk(KERN_INFO "%s: pocket_detection check is: %d!\n", __func__, tmp);
+    
+
+
 	if (is_screen_on) {
 		printk(KERN_INFO "%s: screen is on!\n", __func__);
 		return;

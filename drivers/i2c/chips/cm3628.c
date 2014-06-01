@@ -37,7 +37,8 @@
 #include <linux/wakelock.h>
 #include <linux/jiffies.h>
 #include <mach/board.h>
-
+#include <linux/input/doubletap2wake.h>
+bool is_pocket = false;
 
 #define D(x...) pr_info(x)
 
@@ -63,6 +64,9 @@ static DECLARE_DELAYED_WORK(polling_work, polling_do_work);
 
 static void report_near_do_work(struct work_struct *w);
 static DECLARE_DELAYED_WORK(report_near_work, report_near_do_work);
+
+static int ps_near;
+static int pocket_mode_flag;
 
 struct cm3628_info {
 	struct class *cm3628_class;
@@ -391,8 +395,11 @@ static void report_near_do_work(struct work_struct *w)
 }
 static void report_psensor_input_event(struct cm3628_info *lpi, int interrupt_flag)
 {
+	
 	uint8_t ps_data;
 	int val, ret = 0;
+	int index = 0;
+	uint8_t ps1_adc = 0;
 
 	if (interrupt_flag == 1 && lpi->ps_enable == 0) {
 	/*P-sensor disable but interrupt occur. It might init fail when power on.workaround: reinit*/
@@ -414,6 +421,25 @@ static void report_psensor_input_event(struct cm3628_info *lpi, int interrupt_fl
 	lpi->j_end = jiffies;
 	/*D("%s: j_end = %lu", __func__, lpi->j_end);*/
 	ret = get_ps_adc_value(&ps_data);/*check i2c result*/
+
+	D("[PS][CM3628] ps_data: %d", ps_data);	
+
+	if (pocket_mode_flag == 1) {
+		D("[PS][CM3628] pocket_mode_flag: %d, add delay = 7ms\n", pocket_mode_flag);
+		mdelay(7); 
+		while (index <= 10 && ps1_adc == 0) {
+			D("[PS][CM3628]ps1_adc = 0 retry");
+			//get_ps_adc_value(&ps1_adc, &ps2_adc);
+			get_ps_adc_value(&ps1_adc);
+			if(ps1_adc != 0) {
+				D("[PS][CM3628]retry work");
+				break;
+			}
+			mdelay(1);
+			index++;
+		}
+	}
+
 	if (ret == 0) {
 		val = (ps_data >= lpi->ps_thd_set) ? 0 : 1;
 	} else {/*i2c err, report far to workaround*/
@@ -422,9 +448,21 @@ static void report_psensor_input_event(struct cm3628_info *lpi, int interrupt_fl
 		D("[PS][CM3628] proximity i2c err, report %s, ps_data=%d, record_init_fail %d\n",
 			val ? "FAR" : "NEAR", ps_data, record_init_fail);
 	}
+	
+	D("[PS][CM3628] val is %d", val);
+	
+	ps_near = !val;
+
 	if (lpi->ps_debounce == 1 &&
 		lpi->mfg_mode != NO_IGNORE_BOOT_MODE) {
 		if (val == 0) {
+			if (val == 0
+				&& pocket_mode_flag != 1 &&
+					time_before(lpi->j_end, (lpi->j_start + NEAR_DELAY_TIME))) {
+				lpi->ps_pocket_mode = 1;
+				D("[PS][CM3628] Ignore NEAR event\n");
+				return;
+			}
 			D("[PS][CM3628] delay proximity %s, ps_data=%d\n", val ? "FAR" : "NEAR", ps_data);
 			queue_delayed_work(lpi->lp_wq, &report_near_work,
 				msecs_to_jiffies(lpi->ps_delay_time));
@@ -438,9 +476,11 @@ static void report_psensor_input_event(struct cm3628_info *lpi, int interrupt_fl
 	D("[PS][CM3628] proximity %s, ps_data=%d\n", val ? "FAR" : "NEAR", ps_data);
 	if ((lpi->enable_polling_ignore == 1) && (val == 0) &&
 		(lpi->mfg_mode != NO_IGNORE_BOOT_MODE) &&
+		pocket_mode_flag != 1 &&
 	    (time_before(lpi->j_end, (lpi->j_start + NEAR_DELAY_TIME)))) {
 		D("[PS][CM3628] Ignore NEAR event\n");
 		lpi->ps_pocket_mode = 1;
+		
 	} else {
 		/* 0 is close, 1 is far */
 		input_report_abs(lpi->ps_input_dev, ABS_DISTANCE, val);
@@ -762,7 +802,8 @@ static int psensor_enable(struct cm3628_info *lpi)
 	psensor_initial_cmd(lpi);
 
 	if (lpi->enable_polling_ignore == 1 &&
-		lpi->mfg_mode != NO_IGNORE_BOOT_MODE) {
+		lpi->mfg_mode != NO_IGNORE_BOOT_MODE &&
+		pocket_mode_flag != 1) {
 		/* default report FAR */
 		input_report_abs(lpi->ps_input_dev, ABS_DISTANCE, 1);
 		input_sync(lpi->ps_input_dev);
@@ -783,7 +824,7 @@ static int psensor_enable(struct cm3628_info *lpi)
 
 #ifdef POLLING_PROXIMITY
 	if (lpi->enable_polling_ignore == 1) {
-		if (lpi->mfg_mode != NO_IGNORE_BOOT_MODE) {
+		if (lpi->mfg_mode != NO_IGNORE_BOOT_MODE && pocket_mode_flag != 1) {
 			ret = get_stable_ps_adc_value(&ps_adc);
 			D("[PS][CM3628] INITIAL ps_adc = 0x%02X", ps_adc);
 			if ((ret == 0) && (lpi->mapping_table != NULL) &&
@@ -795,6 +836,7 @@ static int psensor_enable(struct cm3628_info *lpi)
 #endif
 	return ret;
 }
+
 static int psensor_set_disable(struct cm3628_info *lpi)
 {
 	int ret = -EIO;
@@ -845,7 +887,7 @@ static int psensor_disable(struct cm3628_info *lpi)
 	lpi->ps_enable = 0;
 
 #ifdef POLLING_PROXIMITY
-	if (lpi->enable_polling_ignore == 1 && lpi->mfg_mode != NO_IGNORE_BOOT_MODE) {
+	if (lpi->enable_polling_ignore == 1 && lpi->mfg_mode != NO_IGNORE_BOOT_MODE && pocket_mode_flag != 1) {
 		cancel_delayed_work(&polling_work);
 		lpi->ps_base_index = (lpi->mapping_size - 1);
 
@@ -1814,6 +1856,31 @@ check_interrupt_gpio:
 
 	return 0;
 }
+
+int pocket_detection_check(void)
+{
+	struct cm3628_info *lpi = lp_info;
+
+	uint8_t ps1_adc = 0;
+	
+	pocket_mode_flag = 1;
+	
+	psensor_enable(lpi);
+	//printk("[CM3628] %s lpi->ps_pocket_mode = %d\n", __func__, lpi->ps_pocket_mode);
+	
+	//get_ps_adc_value(&ps1_adc);
+	//printk("[CM3628] %s ps1_adc = %d\n", __func__, ps1_adc);
+	printk("[CM3628] %s ps_near = %d\n", __func__, ps_near);
+
+	msleep(50);
+
+	psensor_disable(lpi);
+
+    pocket_mode_flag = 0;
+
+	return (ps_near);
+}
+
 
 
 static int cm3628_setup(struct cm3628_info *lpi)

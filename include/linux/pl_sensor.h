@@ -6,6 +6,7 @@ extern struct blocking_notifier_head psensor_notifier_list;
 
 extern int register_notifier_by_psensor(struct notifier_block *nb);
 extern int unregister_notifier_by_psensor(struct notifier_block *nb);
+int pocket_detection_check(void);
 
 #endif
 
