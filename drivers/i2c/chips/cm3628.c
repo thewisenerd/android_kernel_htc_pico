@@ -37,6 +37,7 @@
 #include <linux/wakelock.h>
 #include <linux/jiffies.h>
 #include <mach/board.h>
+
 #include <linux/input/doubletap2wake.h>
 bool is_pocket = false;
 
@@ -395,7 +396,6 @@ static void report_near_do_work(struct work_struct *w)
 }
 static void report_psensor_input_event(struct cm3628_info *lpi, int interrupt_flag)
 {
-	
 	uint8_t ps_data;
 	int val, ret = 0;
 	int index = 0;
@@ -429,7 +429,6 @@ static void report_psensor_input_event(struct cm3628_info *lpi, int interrupt_fl
 		mdelay(7); 
 		while (index <= 10 && ps1_adc == 0) {
 			D("[PS][CM3628]ps1_adc = 0 retry");
-			//get_ps_adc_value(&ps1_adc, &ps2_adc);
 			get_ps_adc_value(&ps1_adc);
 			if(ps1_adc != 0) {
 				D("[PS][CM3628]retry work");
@@ -1860,23 +1859,18 @@ check_interrupt_gpio:
 int pocket_detection_check(void)
 {
 	struct cm3628_info *lpi = lp_info;
-
 	uint8_t ps1_adc = 0;
-	
 	pocket_mode_flag = 1;
 	
 	psensor_enable(lpi);
-	//printk("[CM3628] %s lpi->ps_pocket_mode = %d\n", __func__, lpi->ps_pocket_mode);
-	
-	//get_ps_adc_value(&ps1_adc);
-	//printk("[CM3628] %s ps1_adc = %d\n", __func__, ps1_adc);
+
 	printk("[CM3628] %s ps_near = %d\n", __func__, ps_near);
-
+	
 	msleep(50);
-
+	
 	psensor_disable(lpi);
-
-    pocket_mode_flag = 0;
+	
+	pocket_mode_flag = 0;
 
 	return (ps_near);
 }
