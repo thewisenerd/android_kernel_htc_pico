@@ -65,28 +65,40 @@ static void reset_bln_states(void)
 {
 	bln_blink_state = 0;
 	bln_ongoing = false;
+#ifdef CONFIG_GENERIC_BLN_USE_WAKELOCK /* just to be sure that the wakelock gets stopped */
+	if(wake_lock_active(&bln_wake_lock)){ 
+		wake_unlock(&bln_wake_lock);
+	}
+#endif
 }
 
 static void bln_enable_backlights(int mask)
 {
-	if (likely(bln_imp && bln_imp->enable))
+	if (likely(bln_imp && bln_imp->enable)) {
 		bln_imp->enable(mask);
-}
-
-static void bln_disable_backlights(int mask)
-{
-	if (likely(bln_imp && bln_imp->disable))
-		bln_imp->disable(mask);
-}
-
-static void bln_power_on(void)
-{
-	if (likely(bln_imp && bln_imp->power_on)) {
 #ifdef CONFIG_GENERIC_BLN_USE_WAKELOCK
 		if(use_wakelock && !wake_lock_active(&bln_wake_lock)){
 			wake_lock(&bln_wake_lock);
 		}
 #endif
+	}
+}
+
+static void bln_disable_backlights(int mask)
+{
+	if (likely(bln_imp && bln_imp->disable)) {
+		bln_imp->disable(mask);
+#ifdef CONFIG_GENERIC_BLN_USE_WAKELOCK
+		if(wake_lock_active(&bln_wake_lock)){
+			wake_unlock(&bln_wake_lock);
+		}
+#endif
+	}
+}
+
+static void bln_power_on(void)
+{
+	if (likely(bln_imp && bln_imp->power_on)) {
 		bln_imp->power_on();
 	}
 }
@@ -95,11 +107,6 @@ static void bln_power_off(void)
 {
 	if (likely(bln_imp && bln_imp->power_off)) {
 		bln_imp->power_off();
-#ifdef CONFIG_GENERIC_BLN_USE_WAKELOCK
-		if(wake_lock_active(&bln_wake_lock)){
-			wake_unlock(&bln_wake_lock);
-		}
-#endif
 	}
 }
 
