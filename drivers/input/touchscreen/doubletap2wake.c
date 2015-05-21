@@ -33,7 +33,7 @@
 #include <asm-generic/cputime.h>
 
 /* uncomment since no touchscreen defines android touch, do that here */
-//#define ANDROID_TOUCH_DECLARED
+#define ANDROID_TOUCH_DECLARED
 
 /* Version, author, desc, etc */
 #define DRIVER_AUTHOR "Dennis Rassmann <showp1984@gmail.com>, Vineeth Raj <contact.twn@openmailbox.org>"
@@ -162,7 +162,7 @@ static void dt2w_input_event(struct input_handle *handle, unsigned int type,
 	}
 
 #if DT2W_DEBUG
-	pr_info(LOGTAG"touch_x: %d, touch_y: %d\n");
+	pr_info(LOGTAG"touch_x: %d, touch_y: %d\n", touch_x, touch_y);
 #endif
 
 	if (touch_x && touch_y) {
