@@ -32,9 +32,6 @@
 #include <linux/hrtimer.h>
 #include <asm-generic/cputime.h>
 
-/* uncomment since no touchscreen defines android touch, do that here */
-#define ANDROID_TOUCH_DECLARED
-
 /* Version, author, desc, etc */
 #define DRIVER_AUTHOR "Dennis Rassmann <showp1984@gmail.com>, Vineeth Raj <contact.twn@openmailbox.org>"
 #define DRIVER_DESCRIPTION "uber simple d2w for almost any device"
@@ -262,12 +259,8 @@ static DEVICE_ATTR(d2w_switch, (S_IWUSR|S_IRUGO),
 /*
  * INIT / EXIT stuff below here
  */
-#ifdef ANDROID_TOUCH_DECLARED
-extern struct kobject *android_touch_kobj;
-#else
-struct kobject *android_touch_kobj;
-EXPORT_SYMBOL_GPL(android_touch_kobj);
-#endif
+struct kobject *ts_mods_kobj;
+EXPORT_SYMBOL_GPL(ts_mods_kobj);
 static int __init doubletap2wake_init(void)
 {
 	int rc = 0;
@@ -298,13 +291,11 @@ static int __init doubletap2wake_init(void)
 	if (rc)
 		pr_err("%s: Failed to register dt2w_input_handler\n", __func__);
 
-#ifndef ANDROID_TOUCH_DECLARED
-	android_touch_kobj = kobject_create_and_add("android_touch", NULL) ;
-	if (android_touch_kobj == NULL) {
-		pr_warn("%s: android_touch_kobj create_and_add failed\n", __func__);
+	ts_mods_kobj = kobject_create_and_add("ts_mods", NULL) ;
+	if (ts_mods_kobj == NULL) {
+		pr_warn("%s: ts_mods_kobj create_and_add failed\n", __func__);
 	}
-#endif
-	rc = sysfs_create_file(android_touch_kobj, &dev_attr_d2w_switch.attr);
+	rc = sysfs_create_file(ts_mods_kobj, &dev_attr_d2w_switch.attr);
 	if (rc) {
 		pr_warn("%s: sysfs_create_file failed for d2w_switch\n", __func__);
 	}
@@ -319,9 +310,7 @@ err_alloc_dev:
 
 static void __exit doubletap2wake_exit(void)
 {
-#ifndef ANDROID_TOUCH_DECLARED
-	kobject_del(android_touch_kobj);
-#endif
+	kobject_del(ts_mods_kobj);
 	input_unregister_handler(&dt2w_input_handler);
 	destroy_workqueue(dt2w_input_wq);
 	input_unregister_device(doubletap2wake_pwrdev);
