@@ -29,6 +29,12 @@
 #include <mach/board.h>
 #include <asm/atomic.h>
 
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+#include <linux/input/doubletap2wake.h>
+#endif
+#endif
+
 #ifdef ABS_MT_SLOT
 #define INPUT_PROTOCOL_B
 #include <linux/input/mt.h>
@@ -807,7 +813,11 @@ static int himax8526a_probe(struct i2c_client *client, const struct i2c_device_i
 	if (client->irq) {
 		ts->use_irq = 1;
 		ret = request_irq(client->irq, himax_ts_irq_handler,
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+				  IRQF_TRIGGER_LOW | IRQF_NO_SUSPEND, client->name, ts);
+#else
 				  IRQF_TRIGGER_LOW, client->name, ts);
+#endif
 		if (ret == 0)
 			printk(KERN_INFO "%s: irq enabled at qpio: %d\n", __func__, client->irq);
 		else {
@@ -867,7 +877,19 @@ static int himax8526a_suspend(struct i2c_client *client, pm_message_t mesg)
 	uint8_t data = 0x01;
 	struct himax_ts_data *ts = i2c_get_clientdata(client);
 	uint8_t new_command[2] = {0x91, 0x00};
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	bool prevent_sleep = false;
+#if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	prevent_sleep = (dt2w_switch > 0);
+#endif
+#endif
 
+#if defined(CONFIG_TOUCHSCREEN_PREVENT_SLEEP)
+	if (prevent_sleep) {
+		enable_irq_wake(client->irq);
+		return 0;
+	}
+#endif
 	i2c_himax_master_write(ts->client, new_command, sizeof(new_command));
 
 	printk(KERN_DEBUG "%s: diag_command= %d\n", __func__, ts->diag_command);
@@ -898,7 +920,19 @@ static int himax8526a_resume(struct i2c_client *client)
 	const uint8_t command_ec_128_raw_flag = 0x01;
 	const uint8_t command_ec_128_raw_baseline_flag = 0x02 | command_ec_128_raw_flag;
 	uint8_t new_command[2] = {0x91, 0x00};
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	bool prevent_sleep = false;
+#if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	prevent_sleep = (dt2w_switch > 0);
+#endif
+#endif
 
+#if defined(CONFIG_TOUCHSCREEN_PREVENT_SLEEP)
+	if (prevent_sleep) {
+		disable_irq_wake(client->irq);
+		return 0;
+	}
+#endif
 	struct himax_ts_data *ts = i2c_get_clientdata(client);
 	printk(KERN_INFO "%s: enter\n", __func__);
 
