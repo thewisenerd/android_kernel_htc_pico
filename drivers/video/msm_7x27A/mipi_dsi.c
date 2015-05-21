@@ -37,6 +37,12 @@
 #include "mdp.h"
 #include "mdp4.h"
 
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+#include <linux/input/doubletap2wake.h>
+#endif
+#endif
+
 #include <mach/panel_id.h>
 
 u32 dsi_irq;
@@ -153,6 +159,11 @@ static int mipi_dsi_off(struct platform_device *pdev)
 		mutex_unlock(&mfd->dma->ov_mutex);
 	else
 		htc_mdp_sem_up(&mfd->dma->mutex);
+
+#if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	scr_suspended = true;
+	doubletap2wake_reset();
+#endif
 
 	return ret;
 }
@@ -347,6 +358,11 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	mdp4_overlay_dsi_state_set(ST_DSI_RESUME);
 
 	pr_debug("%s-:\n", __func__);
+
+#if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	scr_suspended = true;
+	doubletap2wake_reset();
+#endif
 
 	return ret;
 }
