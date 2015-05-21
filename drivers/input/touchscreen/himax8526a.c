@@ -880,7 +880,7 @@ static int himax8526a_suspend(struct i2c_client *client, pm_message_t mesg)
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
 	bool prevent_sleep = false;
 #if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
-	prevent_sleep = (dt2w_switch > 0);
+	prevent_sleep = (d2w_switch > 0);
 #endif
 #endif
 
@@ -923,7 +923,7 @@ static int himax8526a_resume(struct i2c_client *client)
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
 	bool prevent_sleep = false;
 #if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
-	prevent_sleep = (dt2w_switch > 0);
+	prevent_sleep = (d2w_switch > 0);
 #endif
 #endif
 
