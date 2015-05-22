@@ -917,9 +917,6 @@ static void msmfb_early_resume(struct early_suspend *h)
 		msm_fb_resume_sub(mfd);
 	} else {
 		printk(KERN_WARNING "[DISP] %s: already resume. skip!\n", __func__);
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-		htc_on_charge = false;
-#endif
 		hr_msleep(20);
 	}
 
@@ -930,6 +927,9 @@ static void msmfb_early_resume(struct early_suspend *h)
 
 	in_late_resume = TRUE;
 	in_onchg_resume = FALSE;
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	htc_on_charge = false;
+#endif
 	mutex_unlock(&suspend_mutex);
 }
 #ifdef CONFIG_HTC_ONMODE_CHARGING
