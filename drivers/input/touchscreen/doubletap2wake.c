@@ -245,9 +245,12 @@ static ssize_t d2w_dump(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	if (buf[0] == '0') {
+		input_unregister_handler(&dt2w_input_handler);
 		d2w_switch = 0;
 	} else if (buf[0] == '1') {
-		d2w_switch = 1;
+		if (!input_register_handler(&dt2w_input_handler)) {
+			d2w_switch = 1;
+		}
 	}
 
 	return count;
