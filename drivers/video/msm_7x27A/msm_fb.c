@@ -49,13 +49,6 @@
 #include "mdp4.h"
 #include "mipi_dsi.h"
 
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
-#include <linux/input/doubletap2wake.h>
-bool htc_on_charge = false;
-#endif
-#endif
-
 #if defined CONFIG_MACH_PRIMODS || defined CONFIG_MACH_PRIMODD
 #define PRIMO_DS_DD_ESD_WORKAROUND 1
 #endif
@@ -642,7 +635,14 @@ static int msm_fb_remove(struct platform_device *pdev)
 
 DEFINE_MUTEX(suspend_mutex);
 static bool in_late_resume = TRUE;
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+#include <linux/input/doubletap2wake.h>
+bool in_onchg_resume = FALSE;
+#endif
+#else
 static bool in_onchg_resume = FALSE;
+#endif
 
 #if defined(CONFIG_PM) && !defined(CONFIG_HAS_EARLYSUSPEND)
 static int msm_fb_suspend(struct platform_device *pdev, pm_message_t state)
@@ -927,9 +927,6 @@ static void msmfb_early_resume(struct early_suspend *h)
 
 	in_late_resume = TRUE;
 	in_onchg_resume = FALSE;
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-	htc_on_charge = false;
-#endif
 	mutex_unlock(&suspend_mutex);
 }
 #ifdef CONFIG_HTC_ONMODE_CHARGING
@@ -960,9 +957,6 @@ static void msmfb_onchg_suspend(struct early_suspend *h)
 	MSM_FB_INFO("%s is done.\n", __func__);
 
 	in_onchg_resume = FALSE;
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-	htc_on_charge = false;
-#endif
 	mutex_unlock(&suspend_mutex);
 }
 
@@ -978,9 +972,6 @@ static void msmfb_onchg_resume(struct early_suspend *h)
 	MSM_FB_INFO("%s is done.\n", __func__);
 
 	in_onchg_resume = TRUE;
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-	htc_on_charge =  true;
-#endif
 	mutex_unlock(&suspend_mutex);
 }
 #endif /* CONFIG_HTC_ONMODE_CHARGING */

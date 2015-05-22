@@ -360,7 +360,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	pr_debug("%s-:\n", __func__);
 
 #if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
-	scr_suspended = true;
+	scr_suspended = false;
 	doubletap2wake_reset();
 #endif
 

@@ -22,7 +22,7 @@
 #define _LINUX_DOUBLETAP2WAKE_H
 
 extern int d2w_switch;
-extern bool htc_on_charge;
+extern bool in_onchg_resume;
 extern bool scr_suspended;
 void doubletap2wake_reset(void);
 
