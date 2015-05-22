@@ -248,8 +248,10 @@ static ssize_t d2w_dump(struct device *dev,
 		input_unregister_handler(&dt2w_input_handler);
 		d2w_switch = 0;
 	} else if (buf[0] == '1') {
-		if (!input_register_handler(&dt2w_input_handler)) {
-			d2w_switch = 1;
+		if (!d2w_switch) {
+			if (!input_register_handler(&dt2w_input_handler)) {
+				d2w_switch = 1;
+			}
 		}
 	}
 
