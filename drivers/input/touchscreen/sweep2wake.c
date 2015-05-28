@@ -85,6 +85,12 @@ static DEFINE_MUTEX(pwrkeyworklock);
 static struct workqueue_struct *s2w_input_wq;
 static struct work_struct s2w_input_work;
 
+#ifdef CONFIG_INPUT_CAPELLA_CM3628_POCKETMOD
+#define CUSTOM_CHECK_DEF
+#include <linux/cm3628_pocketmod.h>
+static int (*nyx_check) (void) = pocket_detection_check;
+#endif
+
 /* PowerKey work func */
 static void sweep2wake_presspwr(struct work_struct * sweep2wake_presspwr_work) {
 	if (!mutex_trylock(&pwrkeyworklock))
@@ -114,11 +120,17 @@ static void detect_sweep2wake(int *x)
 	} else {
 		if (x_pre < S2W_X_LIMIT) {
 			if ( *x > S2W_X_FINAL ) {
+#ifdef CUSTOM_CHECK_DEF
+				if (nyx_check() <= 0)
+#endif
 				sweep2wake_pwrtrigger();
 				x_pre = 0;
 			}
 		} else if (x_pre > S2W_X_FINAL) {
 			if ( *x < S2W_X_LIMIT ) {
+#ifdef CUSTOM_CHECK_DEF
+				if (nyx_check() <= 0)
+#endif
 				sweep2wake_pwrtrigger();
 				x_pre = 0;
 			}
