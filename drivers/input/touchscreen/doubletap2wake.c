@@ -67,7 +67,7 @@ static struct work_struct dt2w_input_work;
 #ifdef CONFIG_INPUT_CAPELLA_CM3628_POCKETMOD
 #define CUSTOM_CHECK_DEF
 #include <linux/cm3628_pocketmod.h>
-int (*nyx_check) (void) = pocket_detection_check;
+static int (*nyx_check) (void) = pocket_detection_check;
 #endif
 
 void doubletap2wake_reset(void) {
