@@ -64,6 +64,12 @@ static DEFINE_MUTEX(pwrkeyworklock);
 static struct workqueue_struct *dt2w_input_wq;
 static struct work_struct dt2w_input_work;
 
+#ifdef CONFIG_INPUT_CAPELLA_CM3628_POCKETMOD
+#define CUSTOM_CHECK_DEF
+#include <linux/cm3628_pocketmod.h>
+int (*nyx_check) (void) = pocket_detection_check;
+#endif
+
 void doubletap2wake_reset(void) {
 	tap_time_pre = 0;
 	x_pre = 0;
@@ -111,6 +117,9 @@ static void detect_doubletap2wake(int x, int y)
 				(calc_feather(y, y_pre) < D2W_FEATHER) &&
 				(((ktime_to_ms(ktime_get()))-tap_time_pre) < D2W_TIME)) {
 			doubletap2wake_reset();
+#ifdef CUSTOM_CHECK_DEF
+			if (nyx_check() <= 0)
+#endif
 			doubletap2wake_pwrtrigger();
 		} else {
 			doubletap2wake_reset();
