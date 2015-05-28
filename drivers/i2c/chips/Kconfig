@@ -71,6 +71,12 @@ config INPUT_CAPELLA_CM3628
 	  Say Y here to enable the CM3628 Short Distance Proximity
 	  Sensor with Ambient Light Sensor.
 
+config INPUT_CAPELLA_CM3628_POCKETMOD
+	tristate "CM3628 proximity based Pocketmod"
+	help
+	  Say Y here to enable the helper function for proximity based
+	  pocket detection.
+
 config INPUT_CAPELLA_CM3629
 	tristate "CM3629 proximity and light sensor"
 	help

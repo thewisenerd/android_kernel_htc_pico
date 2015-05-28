@@ -1815,6 +1815,24 @@ check_interrupt_gpio:
 	return 0;
 }
 
+#ifdef CONFIG_INPUT_CAPELLA_CM3628_POCKETMOD
+int pocket_detection_check(void)
+{
+	struct cm3628_info *lpi = lp_info;
+	uint8_t ps_adc = 0;
+
+	if (!mutex_trylock(&als_get_adc_mutex))
+		return -1;
+	psensor_enable(lpi);
+	msleep(50);
+	get_ps_adc_value(&ps_adc);
+	printk("[CM3628] %s: ps_adc = %d\n", __func__, ps_adc);
+	psensor_disable(lpi);
+	mutex_unlock(&als_get_adc_mutex);
+
+	return (ps_adc);
+}
+#endif
 
 static int cm3628_setup(struct cm3628_info *lpi)
 {

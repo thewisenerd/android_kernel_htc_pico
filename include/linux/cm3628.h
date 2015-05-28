@@ -129,4 +129,8 @@ struct cm3628_platform_data {
 	uint8_t ps_reset_thd;
 };
 
+#ifdef CONFIG_INPUT_CAPELLA_CM3628_POCKETMOD
+#include "cm3628_pocketmod.h"
+#endif
+
 #endif
