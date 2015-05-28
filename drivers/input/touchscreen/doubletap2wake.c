@@ -145,7 +145,9 @@ static void dt2w_input_event(struct input_handle *handle, unsigned int type,
 		"undef"), code, value);
 #endif
 	if (!scr_suspended)
+#ifdef CONFIG_HTC_ONMODE_CHARGING
 		if (!in_onchg_resume)
+#endif
 			return;
 
 	if (code == ABS_MT_SLOT) {

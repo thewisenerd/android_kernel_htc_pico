@@ -22,8 +22,11 @@
 #define _LINUX_DOUBLETAP2WAKE_H
 
 extern int d2w_switch;
-extern bool in_onchg_resume;
 extern bool scr_suspended;
 void doubletap2wake_reset(void);
+
+#ifdef CONFIG_HTC_ONMODE_CHARGING
+extern bool in_onchg_resume;
+#endif
 
 #endif	/* _LINUX_DOUBLETAP2WAKE_H */
