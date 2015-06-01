@@ -1,9 +1,8 @@
 /*
  * drivers/input/touchscreen/sweep2wake.c
  *
- *
- * Copyright (c) 2013, Dennis Rassmann <showp1984@gmail.com>
  * Copyright (c) 2015, Vineeth Raj <contact.twn@openmailbox.org>
+ * Copyright (c) 2013, Dennis Rassmann <showp1984@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,7 +36,7 @@
 #endif
 
 /* Version, author, desc, etc */
-#define DRIVER_AUTHOR "Dennis Rassmann <showp1984@gmail.com>, , Vineeth Raj <contact.twn@openmailbox.org>"
+#define DRIVER_AUTHOR "Vineeth Raj <contact.twn@openmailbox.org>"
 #define DRIVER_DESCRIPTION "uber simple s2w for almost any device"
 #define DRIVER_VERSION "0.1"
 #define LOGTAG "[sweep2wake]: "
@@ -253,13 +252,15 @@ static ssize_t s2w_show(struct device *dev,
 static ssize_t s2w_dump(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
-	if (buf[0] == '0') {
-		input_unregister_handler(&s2w_input_handler);
-		s2w_switch = 0;
-	} else if (buf[0] == '1') {
-		if (!s2w_switch) {
-			if (!input_register_handler(&s2w_input_handler)) {
-				s2w_switch = 1;
+	if (buf[1] == '\n') {
+		if (buf[0] == '0') {
+			input_unregister_handler(&s2w_input_handler);
+			s2w_switch = 0;
+		} else if (buf[0] == '1') {
+			if (!s2w_switch) {
+				if (!input_register_handler(&s2w_input_handler)) {
+					s2w_switch = 1;
+				}
 			}
 		}
 	}
