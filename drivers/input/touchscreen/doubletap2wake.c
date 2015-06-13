@@ -1,8 +1,8 @@
 /*
  * drivers/input/touchscreen/doubletap2wake.c
  *
- * Copyright (c) 2013, Dennis Rassmann <showp1984@gmail.com>
  * Copyright (c) 2015, Vineeth Raj <contact.twn@openmailbox.org>
+ * Copyright (c) 2013, Dennis Rassmann <showp1984@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
 #include <asm-generic/cputime.h>
 
 /* Version, author, desc, etc */
-#define DRIVER_AUTHOR "Dennis Rassmann <showp1984@gmail.com>, Vineeth Raj <contact.twn@openmailbox.org>"
+#define DRIVER_AUTHOR "Vineeth Raj <contact.twn@openmailbox.org>"
 #define DRIVER_DESCRIPTION "uber simple d2w for almost any device"
 #define DRIVER_VERSION "0.1"
 #define LOGTAG "[doubletap2wake]: "
