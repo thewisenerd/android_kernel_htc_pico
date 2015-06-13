@@ -44,14 +44,14 @@ MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPLv2");
 
 /* Tuneables */
-#define DT2W_DEFAULT   1
-#define DT2W_DEBUG     1
+#define D2W_DEFAULT    1
+#define D2W_DEBUG      1
 #define D2W_PWRKEY_DUR 60
 #define D2W_FEATHER    50
 #define D2W_TIME       700
 
 /* Resources */
-int d2w_switch = DT2W_DEFAULT;
+int d2w_switch = D2W_DEFAULT;
 static cputime64_t tap_time_pre = 0;
 static int x_pre = 0, y_pre = 0;
 static int touch_x = 0, touch_y = 0;
@@ -61,8 +61,8 @@ bool scr_suspended = false;
 static struct input_dev * doubletap2wake_pwrdev;
 static DEFINE_MUTEX(pwrkeyworklock);
 
-static struct workqueue_struct *dt2w_input_wq;
-static struct work_struct dt2w_input_work;
+static struct workqueue_struct *d2w_input_wq;
+static struct work_struct d2w_input_work;
 
 #ifdef CONFIG_INPUT_CAPELLA_CM3628_POCKETMOD
 #define CUSTOM_CHECK_DEF
@@ -128,16 +128,16 @@ static void detect_doubletap2wake(int x, int y)
 	}
 } //detect_doubletap2wake
 
-static void dt2w_input_callback(struct work_struct *unused) {
+static void d2w_input_callback(struct work_struct *unused) {
 
 	detect_doubletap2wake(touch_x, touch_y);
 
 	return;
 }
 
-static void dt2w_input_event(struct input_handle *handle, unsigned int type,
+static void d2w_input_event(struct input_handle *handle, unsigned int type,
 				unsigned int code, int value) {
-#if DT2W_DEBUG
+#if D2W_DEBUG
 	pr_info(LOGTAG"code: %s|%u, val: %i\n",
 		((code==ABS_MT_POSITION_X) ? "X" :
 		(code==ABS_MT_POSITION_Y) ? "Y" :
@@ -169,13 +169,13 @@ static void dt2w_input_event(struct input_handle *handle, unsigned int type,
 		touch_y = value;
 	}
 
-#if DT2W_DEBUG
+#if D2W_DEBUG
 	pr_info(LOGTAG"touch_x: %d, touch_y: %d\n", touch_x, touch_y);
 #endif
 
 	if (touch_x && touch_y) {
 		touch_x = 0; touch_y = 0;
-		queue_work_on(0, dt2w_input_wq, &dt2w_input_work);
+		queue_work_on(0, d2w_input_wq, &d2w_input_work);
 	}
 }
 
@@ -188,7 +188,7 @@ static int input_dev_filter(struct input_dev *dev) {
 	}
 }
 
-static int dt2w_input_connect(struct input_handler *handler,
+static int d2w_input_connect(struct input_handler *handler,
 				struct input_dev *dev, const struct input_device_id *id) {
 	struct input_handle *handle;
 	int error;
@@ -202,7 +202,7 @@ static int dt2w_input_connect(struct input_handler *handler,
 
 	handle->dev = dev;
 	handle->handler = handler;
-	handle->name = "dt2w";
+	handle->name = "d2w";
 
 	error = input_register_handle(handle);
 	if (error)
@@ -220,23 +220,23 @@ err2:
 	return error;
 }
 
-static void dt2w_input_disconnect(struct input_handle *handle) {
+static void d2w_input_disconnect(struct input_handle *handle) {
 	input_close_device(handle);
 	input_unregister_handle(handle);
 	kfree(handle);
 }
 
-static const struct input_device_id dt2w_ids[] = {
+static const struct input_device_id d2w_ids[] = {
 	{ .driver_info = 1 },
 	{ },
 };
 
-static struct input_handler dt2w_input_handler = {
-	.event			= dt2w_input_event,
-	.connect		= dt2w_input_connect,
-	.disconnect	= dt2w_input_disconnect,
-	.name				= "dt2w_inputreq",
-	.id_table		= dt2w_ids,
+static struct input_handler d2w_input_handler = {
+	.event			= d2w_input_event,
+	.connect		= d2w_input_connect,
+	.disconnect	= d2w_input_disconnect,
+	.name				= "d2w_inputreq",
+	.id_table		= d2w_ids,
 };
 
 /*
@@ -256,11 +256,11 @@ static ssize_t d2w_dump(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	if (buf[0] == '0') {
-		input_unregister_handler(&dt2w_input_handler);
+		input_unregister_handler(&d2w_input_handler);
 		d2w_switch = 0;
 	} else if (buf[0] == '1') {
 		if (!d2w_switch) {
-			if (!input_register_handler(&dt2w_input_handler)) {
+			if (!input_register_handler(&d2w_input_handler)) {
 				d2w_switch = 1;
 			}
 		}
@@ -288,8 +288,8 @@ static int __init doubletap2wake_init(void)
 	}
 
 	input_set_capability(doubletap2wake_pwrdev, EV_KEY, KEY_POWER);
-	doubletap2wake_pwrdev->name = "dt2w_pwrkey";
-	doubletap2wake_pwrdev->phys = "dt2w_pwrkey/input0";
+	doubletap2wake_pwrdev->name = "d2w_pwrkey";
+	doubletap2wake_pwrdev->phys = "d2w_pwrkey/input0";
 
 	rc = input_register_device(doubletap2wake_pwrdev);
 	if (rc) {
@@ -297,15 +297,15 @@ static int __init doubletap2wake_init(void)
 		goto err_input_dev;
 	}
 
-	dt2w_input_wq = create_workqueue("dt2wiwq");
-	if (!dt2w_input_wq) {
-		pr_err("%s: Failed to create dt2wiwq workqueue\n", __func__);
+	d2w_input_wq = create_workqueue("d2wiwq");
+	if (!d2w_input_wq) {
+		pr_err("%s: Failed to create d2wiwq workqueue\n", __func__);
 		return -EFAULT;
 	}
-	INIT_WORK(&dt2w_input_work, dt2w_input_callback);
-	rc = input_register_handler(&dt2w_input_handler);
+	INIT_WORK(&d2w_input_work, d2w_input_callback);
+	rc = input_register_handler(&d2w_input_handler);
 	if (rc)
-		pr_err("%s: Failed to register dt2w_input_handler\n", __func__);
+		pr_err("%s: Failed to register d2w_input_handler\n", __func__);
 
 	ts_mods_kobj = kobject_create_and_add("ts_mods", NULL) ;
 	if (ts_mods_kobj == NULL) {
@@ -327,8 +327,8 @@ err_alloc_dev:
 static void __exit doubletap2wake_exit(void)
 {
 	kobject_del(ts_mods_kobj);
-	input_unregister_handler(&dt2w_input_handler);
-	destroy_workqueue(dt2w_input_wq);
+	input_unregister_handler(&d2w_input_handler);
+	destroy_workqueue(d2w_input_wq);
 	input_unregister_device(doubletap2wake_pwrdev);
 	input_free_device(doubletap2wake_pwrdev);
 	return;
