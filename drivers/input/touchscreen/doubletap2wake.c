@@ -44,11 +44,12 @@ MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPLv2");
 
 /* Tuneables */
-#define D2W_DEFAULT    1
-#define D2W_DEBUG      1
-#define D2W_PWRKEY_DUR 60
-#define D2W_FEATHER    50
-#define D2W_TIME       700
+#define D2W_DEFAULT     1
+#define D2W_DEBUG       1
+#define D2W_PWRKEY_DUR  60
+#define D2W_FEATHER     50
+#define D2W_TIME        700
+/* Tuneables (end) */
 
 /* Resources */
 int d2w_switch = D2W_DEFAULT;
@@ -63,12 +64,15 @@ static DEFINE_MUTEX(pwrkeyworklock);
 
 static struct workqueue_struct *d2w_input_wq;
 static struct work_struct d2w_input_work;
+/* Resources (end) */
 
+/* Configs */
 #ifdef CONFIG_INPUT_CAPELLA_CM3628_POCKETMOD
 #define CUSTOM_CHECK_DEF
 #include <linux/cm3628_pocketmod.h>
 static int (*nyx_check) (void) = pocket_detection_check;
 #endif
+/* Configs (end) */
 
 void doubletap2wake_reset(void) {
 	tap_time_pre = 0;
