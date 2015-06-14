@@ -437,11 +437,19 @@ static ssize_t himax_reset_set(struct device *dev,
 static DEVICE_ATTR(reset, (S_IWUSR|S_IRUGO),
 	himax_reset_show, himax_reset_set);
 
-static struct kobject *android_touch_kobj;
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+struct kobject *android_touch_kobj = NULL;
+EXPORT_SYMBOL_GPL(android_touch_kobj);
+#else
+static struct kobject *android_touch_kobj = NULL;
+#endif
 
 static int himax_touch_sysfs_init(void)
 {
 	int ret;
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	if (android_touch_kobj == NULL)
+#endif
 	android_touch_kobj = kobject_create_and_add("android_touch", NULL);
 	if (android_touch_kobj == NULL) {
 		printk(KERN_ERR "[TS]%s: subsystem_register failed\n", __func__);
@@ -761,7 +769,7 @@ static int himax8526a_probe(struct i2c_client *client, const struct i2c_device_i
 	set_bit(BTN_TOUCH, ts->input_dev->keybit);
 	//set_bit(KEY_APP_SWITCH, ts->input_dev->keybit);
 	set_bit(INPUT_PROP_DIRECT, ts->input_dev->propbit);
-	
+
 #ifdef INPUT_PROTOCOL_A
 	ts->input_dev->mtsize = HIMAX8526A_FINGER_SUPPORT_NUM;
 	input_set_abs_params(ts->input_dev, ABS_MT_TRACKING_ID,
