@@ -31,6 +31,24 @@
 #include <linux/hrtimer.h>
 #include <linux/input/sweep2wake.h>
 
+/* Configs */
+/* if 'android_touch' kobj is already declared, we use that */
+/* if doubletap2wake is enabled, it takes care of android_touch_kobj */
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+#define ANDROID_TOUCH_DECLARED
+#endif
+/* if we have a custom check like pocketmods, we define that here */
+#ifdef CONFIG_INPUT_CAPELLA_CM3628_POCKETMOD
+#define CUSTOM_CHECK_DEF
+#endif
+/* Configs (end) */
+
+/* Configs headers */
+#ifdef CUSTOM_CHECK_DEF
+#include <linux/cm3628_pocketmod.h>
+#endif
+/* Configs headers (end) */
+
 /* Version, author, desc, etc */
 #define DRIVER_AUTHOR "Vineeth Raj <contact.twn@openmailbox.org>"
 #define DRIVER_DESCRIPTION "uber simple s2w for almost any device"
@@ -41,15 +59,6 @@ MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
 MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPLv2");
-
-/* Configs */
-/* if 'android_touch' kobj is already declared, we use that */
-#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
-#define ANDROID_TOUCH_DECLARED
-#endif
-/* if we have a custom check like pocketmods, we define that here */
-#define CUSTOM_CHECK_DEF
-/* Configs (end) */
 
 /* Tuneables */
 #define S2W_DEBUG           0
@@ -102,10 +111,7 @@ EXPORT_SYMBOL_GPL(android_touch_kobj);
 #endif
 
 #ifdef CUSTOM_CHECK_DEF
-#ifdef CONFIG_INPUT_CAPELLA_CM3628_POCKETMOD
-#include <linux/cm3628_pocketmod.h>
 static int (*nyx_check) (void) = pocket_detection_check;
-#endif
 #endif
 /* Configs helpers (end) */
 

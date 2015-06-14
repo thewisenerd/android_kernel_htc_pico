@@ -32,6 +32,19 @@
 #include <asm-generic/cputime.h>
 #include <linux/input/doubletap2wake.h>
 
+/* Configs */
+/* if 'android_touch' kobj is already declared, we use that */
+#define ANDROID_TOUCH_DECLARED
+/* if we have a custom check like pocketmods, we define that here */
+#define CUSTOM_CHECK_DEF
+/* Configs (end) */
+
+/* Configs headers */
+#ifdef CUSTOM_CHECK_DEF
+#include <linux/cm3628_pocketmod.h>
+#endif
+/* Configs headers (end) */
+
 /* Version, author, desc, etc */
 #define DRIVER_AUTHOR "Vineeth Raj <contact.twn@openmailbox.org>"
 #define DRIVER_DESCRIPTION "uber simple d2w for almost any device"
@@ -42,13 +55,6 @@ MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
 MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPLv2");
-
-/* Configs */
-/* if 'android_touch' kobj is already declared, we use that */
-#define ANDROID_TOUCH_DECLARED
-/* if we have a custom check like pocketmods, we define that here */
-#define CUSTOM_CHECK_DEF
-/* Configs (end) */
 
 /* Tuneables */
 #define D2W_DEFAULT     1
@@ -82,10 +88,7 @@ EXPORT_SYMBOL_GPL(android_touch_kobj);
 #endif
 
 #ifdef CUSTOM_CHECK_DEF
-#ifdef CONFIG_INPUT_CAPELLA_CM3628_POCKETMOD
-#include <linux/cm3628_pocketmod.h>
 static int (*nyx_check) (void) = pocket_detection_check;
-#endif
 #endif
 /* Configs helpers (end) */
 
