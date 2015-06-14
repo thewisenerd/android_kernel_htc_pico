@@ -374,7 +374,7 @@ static ssize_t s2w_dump(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(s2w_switch, (S_IWUSR|S_IRUGO),
+static DEVICE_ATTR(sweep2wake, (S_IWUSR|S_IRUGO),
 	s2w_show, s2w_dump);
 
 /*
@@ -416,7 +416,7 @@ static int __init sweep2wake_init(void)
 			pr_warn("%s: android_touch_kobj create_and_add failed\n", __func__);
 		}
 	}
-	rc = sysfs_create_file(android_touch_kobj, &dev_attr_s2w_switch.attr);
+	rc = sysfs_create_file(android_touch_kobj, &dev_attr_sweep2wake.attr);
 	if (rc) {
 		pr_warn("%s: sysfs_create_file failed for s2w_switch\n", __func__);
 	}
