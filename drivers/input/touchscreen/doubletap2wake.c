@@ -25,12 +25,12 @@
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/err.h>
-#include <linux/input/doubletap2wake.h>
 #include <linux/slab.h>
 #include <linux/workqueue.h>
 #include <linux/input.h>
 #include <linux/hrtimer.h>
 #include <asm-generic/cputime.h>
+#include <linux/input/doubletap2wake.h>
 
 /* Version, author, desc, etc */
 #define DRIVER_AUTHOR "Vineeth Raj <contact.twn@openmailbox.org>"
@@ -97,6 +97,7 @@ void doubletap2wake_reset(void) {
 	touch_x = 0; touch_y = 0;
 }
 
+/* PowerKey work func */
 static void doubletap2wake_presspwr(struct work_struct * doubletap2wake_presspwr_work) {
 	if (!mutex_trylock(&pwrkeyworklock))
 		return;
@@ -251,11 +252,11 @@ static const struct input_device_id d2w_ids[] = {
 };
 
 static struct input_handler d2w_input_handler = {
-	.event			= d2w_input_event,
-	.connect		= d2w_input_connect,
-	.disconnect	= d2w_input_disconnect,
-	.name				= "d2w_inputreq",
-	.id_table		= d2w_ids,
+	.event      = d2w_input_event,
+	.connect    = d2w_input_connect,
+	.disconnect = d2w_input_disconnect,
+	.name       = "d2w_inputreq",
+	.id_table   = d2w_ids,
 };
 
 /*
@@ -274,13 +275,15 @@ static ssize_t d2w_show(struct device *dev,
 static ssize_t d2w_dump(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
-	if (buf[0] == '0') {
-		input_unregister_handler(&d2w_input_handler);
-		d2w_switch = 0;
-	} else if (buf[0] == '1') {
-		if (!d2w_switch) {
-			if (!input_register_handler(&d2w_input_handler)) {
-				d2w_switch = 1;
+	if (buf[1] == '\n') {
+		if (buf[0] == '0') {
+			input_unregister_handler(&d2w_input_handler);
+			d2w_switch = 0;
+		} else if (buf[0] == '1') {
+			if (!d2w_switch) {
+				if (!input_register_handler(&d2w_input_handler)) {
+					d2w_switch = 1;
+				}
 			}
 		}
 	}
@@ -324,12 +327,12 @@ static int __init doubletap2wake_init(void)
 	if (rc)
 		pr_err("%s: Failed to register d2w_input_handler\n", __func__);
 
-#ifndef ANDROID_TOUCH_DECLARED
-	android_touch_kobj = kobject_create_and_add("android_touch", NULL) ;
 	if (android_touch_kobj == NULL) {
-		pr_warn("%s: android_touch_kobj create_and_add failed\n", __func__);
+		android_touch_kobj = kobject_create_and_add("android_touch", NULL) ;
+		if (android_touch_kobj == NULL) {
+			pr_warn("%s: android_touch_kobj create_and_add failed\n", __func__);
+		}
 	}
-#endif
 	rc = sysfs_create_file(android_touch_kobj, &dev_attr_d2w_switch.attr);
 	if (rc) {
 		pr_warn("%s: sysfs_create_file failed for d2w_switch\n", __func__);

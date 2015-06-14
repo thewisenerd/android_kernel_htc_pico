@@ -25,15 +25,11 @@
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/err.h>
-#include <linux/input/sweep2wake.h>
 #include <linux/slab.h>
 #include <linux/workqueue.h>
 #include <linux/input.h>
 #include <linux/hrtimer.h>
-
-#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
-#define ANDROID_TOUCH_DECLARED
-#endif
+#include <linux/input/sweep2wake.h>
 
 /* Version, author, desc, etc */
 #define DRIVER_AUTHOR "Vineeth Raj <contact.twn@openmailbox.org>"
@@ -46,27 +42,39 @@ MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
 MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPLv2");
 
+/* Configs */
+/* if 'android_touch' kobj is already declared, we use that */
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+#define ANDROID_TOUCH_DECLARED
+#endif
+/* if we have a custom check like pocketmods, we define that here */
+#define CUSTOM_CHECK_DEF
+/* Configs (end) */
+
 /* Tuneables */
 #define S2W_DEBUG           0
 #define S2W_DEFAULT         1
 #define S2W_PWRKEY_DUR      60
+/* Tuneables (end) */
 
+/* device configs */
 #if defined(CONFIG_MACH_PICO)
 /* HTC Pico 2011 */
-#define S2W_Y_LIMIT			910
-#define S2W_Y_MAX				1050
-#define S2W_X_MAX				1024
-#define S2W_X_LIMIT			300
-#define S2W_X_FINAL			S2W_X_MAX-S2W_X_LIMIT
+#define S2W_Y_LIMIT     910
+#define S2W_Y_MAX       1050
+#define S2W_X_MAX       1024
+#define S2W_X_LIMIT     300
+#define S2W_X_FINAL     S2W_X_MAX-S2W_X_LIMIT
 #else
 /* defaults */
 /* todo: add standard defines later */
-#define S2W_Y_LIMIT			910
-#define S2W_Y_MAX				1050
-#define S2W_X_MAX				1024
-#define S2W_X_LIMIT			300
-#define S2W_X_FINAL			S2W_X_MAX-S2W_X_LIMIT
+#define S2W_Y_LIMIT     910
+#define S2W_Y_MAX       1050
+#define S2W_X_MAX       1024
+#define S2W_X_LIMIT     300
+#define S2W_X_FINAL     S2W_X_MAX-S2W_X_LIMIT
 #endif
+/* device configs (end) */
 
 /* Resources */
 int s2w_switch = S2W_DEFAULT;
@@ -83,12 +91,23 @@ static DEFINE_MUTEX(pwrkeyworklock);
 
 static struct workqueue_struct *s2w_input_wq;
 static struct work_struct s2w_input_work;
+/* Resources (end) */
 
+/* Configs helpers */
+#ifdef ANDROID_TOUCH_DECLARED
+extern struct kobject *android_touch_kobj;
+#else
+struct kobject *android_touch_kobj;
+EXPORT_SYMBOL_GPL(android_touch_kobj);
+#endif
+
+#ifdef CUSTOM_CHECK_DEF
 #ifdef CONFIG_INPUT_CAPELLA_CM3628_POCKETMOD
-#define CUSTOM_CHECK_DEF
 #include <linux/cm3628_pocketmod.h>
 static int (*nyx_check) (void) = pocket_detection_check;
 #endif
+#endif
+/* Configs helpers (end) */
 
 /* PowerKey work func */
 static void sweep2wake_presspwr(struct work_struct * sweep2wake_presspwr_work) {
@@ -229,11 +248,11 @@ static const struct input_device_id s2w_ids[] = {
 };
 
 static struct input_handler s2w_input_handler = {
-	.event		= s2w_input_event,
-	.connect	= s2w_input_connect,
-	.disconnect	= s2w_input_disconnect,
-	.name		= "s2w_inputreq",
-	.id_table	= s2w_ids,
+	.event      = s2w_input_event,
+	.connect    = s2w_input_connect,
+	.disconnect = s2w_input_disconnect,
+	.name       = "s2w_inputreq",
+	.id_table   = s2w_ids,
 };
 
 /*
@@ -274,12 +293,6 @@ static DEVICE_ATTR(s2w_switch, (S_IWUSR|S_IRUGO),
 /*
  * INIT / EXIT stuff below here
  */
-#ifdef ANDROID_TOUCH_DECLARED
-extern struct kobject *ts_mods_kobj;
-#else
-struct kobject *ts_mods_kobj;
-EXPORT_SYMBOL_GPL(ts_mods_kobj);
-#endif
 static int __init sweep2wake_init(void)
 {
 	int rc = 0;
@@ -310,13 +323,13 @@ static int __init sweep2wake_init(void)
 	if (rc)
 		pr_err("%s: Failed to register s2w_input_handler\n", __func__);
 
-#ifndef ANDROID_TOUCH_DECLARED
-	ts_mods_kobj = kobject_create_and_add("ts_mods", NULL) ;
-	if (ts_mods_kobj == NULL) {
-		pr_warn("%s: ts_mods_kobj create_and_add failed\n", __func__);
+	if (android_touch_kobj == NULL) {
+		android_touch_kobj = kobject_create_and_add("android_touch", NULL);
+		if (android_touch_kobj == NULL) {
+			pr_warn("%s: android_touch_kobj create_and_add failed\n", __func__);
+		}
 	}
-#endif
-	rc = sysfs_create_file(ts_mods_kobj, &dev_attr_s2w_switch.attr);
+	rc = sysfs_create_file(android_touch_kobj, &dev_attr_s2w_switch.attr);
 	if (rc) {
 		pr_warn("%s: sysfs_create_file failed for s2w_switch\n", __func__);
 	}
@@ -332,7 +345,7 @@ err_alloc_dev:
 static void __exit sweep2wake_exit(void)
 {
 #ifndef ANDROID_TOUCH_DECLARED
-	kobject_del(ts_mods_kobj);
+	kobject_del(android_touch_kobj);
 #endif
 	input_unregister_handler(&s2w_input_handler);
 	destroy_workqueue(s2w_input_wq);
