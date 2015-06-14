@@ -43,6 +43,13 @@ MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
 MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPLv2");
 
+/* Configs */
+/* if 'android_touch' kobj is already declared, we use that */
+#define ANDROID_TOUCH_DECLARED
+/* if we have a custom check like pocketmods, we define that here */
+#define CUSTOM_CHECK_DEF
+/* Configs (end) */
+
 /* Tuneables */
 #define D2W_DEFAULT     1
 #define D2W_DEBUG       1
@@ -66,13 +73,21 @@ static struct workqueue_struct *d2w_input_wq;
 static struct work_struct d2w_input_work;
 /* Resources (end) */
 
-/* Configs */
+/* Configs helpers */
+#ifdef ANDROID_TOUCH_DECLARED
+extern struct kobject *android_touch_kobj;
+#else
+struct kobject *android_touch_kobj;
+EXPORT_SYMBOL_GPL(android_touch_kobj);
+#endif
+
+#ifdef CUSTOM_CHECK_DEF
 #ifdef CONFIG_INPUT_CAPELLA_CM3628_POCKETMOD
-#define CUSTOM_CHECK_DEF
 #include <linux/cm3628_pocketmod.h>
 static int (*nyx_check) (void) = pocket_detection_check;
 #endif
-/* Configs (end) */
+#endif
+/* Configs helpers (end) */
 
 void doubletap2wake_reset(void) {
 	tap_time_pre = 0;
@@ -279,8 +294,6 @@ static DEVICE_ATTR(d2w_switch, (S_IWUSR|S_IRUGO),
 /*
  * INIT / EXIT stuff below here
  */
-struct kobject *ts_mods_kobj;
-EXPORT_SYMBOL_GPL(ts_mods_kobj);
 static int __init doubletap2wake_init(void)
 {
 	int rc = 0;
@@ -311,11 +324,13 @@ static int __init doubletap2wake_init(void)
 	if (rc)
 		pr_err("%s: Failed to register d2w_input_handler\n", __func__);
 
-	ts_mods_kobj = kobject_create_and_add("ts_mods", NULL) ;
-	if (ts_mods_kobj == NULL) {
-		pr_warn("%s: ts_mods_kobj create_and_add failed\n", __func__);
+#ifndef ANDROID_TOUCH_DECLARED
+	android_touch_kobj = kobject_create_and_add("android_touch", NULL) ;
+	if (android_touch_kobj == NULL) {
+		pr_warn("%s: android_touch_kobj create_and_add failed\n", __func__);
 	}
-	rc = sysfs_create_file(ts_mods_kobj, &dev_attr_d2w_switch.attr);
+#endif
+	rc = sysfs_create_file(android_touch_kobj, &dev_attr_d2w_switch.attr);
 	if (rc) {
 		pr_warn("%s: sysfs_create_file failed for d2w_switch\n", __func__);
 	}
@@ -330,7 +345,9 @@ err_alloc_dev:
 
 static void __exit doubletap2wake_exit(void)
 {
-	kobject_del(ts_mods_kobj);
+#ifndef ANDROID_TOUCH_DECLARED
+	kobject_del(android_touch_kobj);
+#endif
 	input_unregister_handler(&d2w_input_handler);
 	destroy_workqueue(d2w_input_wq);
 	input_unregister_device(doubletap2wake_pwrdev);
