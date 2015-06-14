@@ -36,12 +36,33 @@
 /* if 'android_touch' kobj is already declared, we use that */
 #define ANDROID_TOUCH_DECLARED
 /* if we have a custom check like pocketmods, we define that here */
+#ifdef CONFIG_INPUT_CAPELLA_CM3628_POCKETMOD
 #define CUSTOM_CHECK_DEF
+#endif
+/* if we do not have to depend on notifiers for wake hooks, uncomment */
+//#define WAKE_HOOKS_DEF
+/* if we want to use msm mdss lcd notifier instead fb notifier, uncomment */
+#ifdef CONFIG_FB_MSM_MDSS
+//#define USE_MDSS_NOTIFER
+#endif
 /* Configs (end) */
 
 /* Configs headers */
 #ifdef CUSTOM_CHECK_DEF
 #include <linux/cm3628_pocketmod.h>
+#endif
+
+#ifndef WAKE_HOOKS_DEF
+#if defined(CONFIG_FB_MSM_MDSS) && defined(USE_MDSS_NOTIFER)
+#include <linux/lcd_notify.h>
+#elif defined(CONFIG_FB)
+#include <linux/notifier.h>
+#include <linux/fb.h>
+#elif defined(CONFIG_HAS_EARLYSUSPEND)
+#include <linux/earlysuspend.h>
+#else
+/* no notifiers, just define WAKE_HOOKS_DEF */
+#define WAKE_HOOKS_DEF
 #endif
 /* Configs headers (end) */
 
@@ -89,6 +110,15 @@ EXPORT_SYMBOL_GPL(android_touch_kobj);
 
 #ifdef CUSTOM_CHECK_DEF
 static int (*nyx_check) (void) = pocket_detection_check;
+#endif
+
+#ifndef WAKE_HOOKS_DEF
+#if defined(CONFIG_FB_MSM_MDSS) && defined(USE_MDSS_NOTIFER)
+static struct notifier_block d2w_lcd_notif;
+#elif defined(CONFIG_FB)
+static struct notifier_block d2w_fb_notif;
+#elif defined(CONFIG_HAS_EARLYSUSPEND)
+static struct early_suspend d2w_early_suspend_handler;
 #endif
 /* Configs helpers (end) */
 
@@ -262,6 +292,59 @@ static struct input_handler d2w_input_handler = {
 	.id_table   = d2w_ids,
 };
 
+#ifndef WAKE_HOOKS_DEF
+#if defined(CONFIG_FB_MSM_MDSS) && defined(USE_MDSS_NOTIFER)
+static int lcd_notifier_callback(struct notifier_block *this,
+				unsigned long event, void *data)
+{
+	switch (event) {
+	case LCD_EVENT_ON_END:
+		scr_suspended = false;
+		break;
+	case LCD_EVENT_OFF_END:
+		scr_suspended = true;
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+#elif defined(CONFIG_FB)
+static int fb_notifier_callback(struct notifier_block *self,
+				 unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	int *blank;
+
+	if (evdata && evdata->data && event == FB_EVENT_BLANK &&
+			ft5x06 && ft5x06->dev) {
+		blank = evdata->data;
+		switch (*blank) {
+			case FB_BLANK_UNBLANK:
+				scr_suspended = false;
+				break;
+			case FB_BLANK_POWERDOWN:
+			case FB_BLANK_HSYNC_SUSPEND:
+			case FB_BLANK_VSYNC_SUSPEND:
+			case FB_BLANK_NORMAL:
+				scr_suspended = true;
+				break;
+		}
+	}
+
+	return NOTIFY_OK;
+}
+#elif defined(CONFIG_HAS_EARLYSUSPEND)
+static void d2w_early_suspend(struct early_suspend *h) {
+	scr_suspended = true;
+}
+
+static void d2w_late_resume(struct early_suspend *h) {
+	scr_suspended = false;
+}
+#endif // !WAKE_HOOKS_DEF
+
 /*
  * SYSFS stuff below here
  */
@@ -341,6 +424,24 @@ static int __init doubletap2wake_init(void)
 		pr_warn("%s: sysfs_create_file failed for d2w_switch\n", __func__);
 	}
 
+#ifndef WAKE_HOOKS_DEF
+#if defined(CONFIG_FB_MSM_MDSS) && defined(USE_MDSS_NOTIFER)
+	d2w_lcd_notif.notifier_call = lcd_notifier_callback;
+	rc = lcd_register_client(&d2w_lcd_notif);
+	if (rc)
+		pr_err("%s: Failed to register lcd callback: %d\n", __func__, rc);
+#elif defined(CONFIG_FB)
+	d2w_fb_notif.notifier_call = fb_notifier_callback;
+	rc = fb_register_client(&d2w_fb_notif);
+	if (rc)
+		pr_err("%s: Unable to register fb_notifier: %d\n", __func__, rc);
+#elif defined(CONFIG_HAS_EARLYSUSPEND)
+	d2w_early_suspend_handler.level   = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
+	d2w_early_suspend_handler.suspend = d2w_early_suspend;
+	d2w_early_suspend_handler.resume  = d2w_late_resume;
+	register_early_suspend(&d2w_early_suspend_handler);
+#endif
+
 err_input_dev:
 	input_free_device(doubletap2wake_pwrdev);
 err_alloc_dev:
@@ -353,6 +454,14 @@ static void __exit doubletap2wake_exit(void)
 {
 #ifndef ANDROID_TOUCH_DECLARED
 	kobject_del(android_touch_kobj);
+#endif
+#ifndef WAKE_HOOKS_DEF
+#if defined(CONFIG_FB_MSM_MDSS) && defined(USE_MDSS_NOTIFER)
+	lcd_unregister_client(&d2w_lcd_notif);
+#elif defined(CONFIG_FB)
+	fb_unregister_client(&d2w_fb_notif);
+#elif defined(CONFIG_HAS_EARLYSUSPEND)
+	unregister_early_suspend(&d2w_early_suspend_handler);
 #endif
 	input_unregister_handler(&d2w_input_handler);
 	destroy_workqueue(d2w_input_wq);

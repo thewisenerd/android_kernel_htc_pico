@@ -341,6 +341,7 @@ static void s2w_late_resume(struct early_suspend *h) {
 	scr_suspended = false;
 }
 #endif // !WAKE_HOOKS_DEF
+
 /*
  * SYSFS stuff below here
  */
